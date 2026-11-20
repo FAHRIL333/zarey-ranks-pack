@@ -83,7 +83,6 @@ def draw_bedrock_native(text, top, bot, border, w):
     layer = Image.new("L", (tw, th), 0)
     ImageDraw.Draw(layer).text((-bb[0], -bb[1]), text, font=f, fill=255)
     layer = layer.resize((max(1, round(tw / 4)), max(1, round(th / 4))), Image.LANCZOS)
-    layer = layer.point(lambda v: 255 if v >= 110 else 0)
     ox = (w - layer.width) // 2
     oy = (h - layer.height) // 2
     img.paste((255, 255, 255, 255), (ox, oy), layer)
@@ -150,9 +149,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 6], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 7], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 6]}]}, f, indent=2)
+                                "version": [1, 0, 7]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
