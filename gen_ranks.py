@@ -53,11 +53,7 @@ def draw_pill(text, top, bot, border, height=36, pad=10):
     return img.resize((max(1, w // S), max(1, h // S)), Image.LANCZOS)
 
 def draw_bedrock_native(text, top, bot, border, w):
-    """Badge Bedrock digambar LANGSUNG di ukuran akhir (tanpa downscale) supaya tidak blur.
-
-    Ukuran render klien ikut jumlah piksel art, jadi ukuran tetap = w kecil,
-    ketajaman didapat dari teks yang di-threshold jadi biner 1 bit (tajam, tanpa halo abu-abu).
-    """
+    """Badge Bedrock digambar langsung di ukuran akhir, teks anti-aliased normal (tanpa downscale)."""
     h = max(7, round(w * 12 / 36))
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     body = Image.new("RGBA", (w, h))
@@ -69,23 +65,17 @@ def draw_bedrock_native(text, top, bot, border, w):
     img.paste(body, (0, 0), mask)
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([0, 0, w - 1, h - 1], radius=max(2, h // 2), outline=border + (255,), width=1)
-    # teks: render 4x lalu threshold -> biner, tepi tajam
-    target_cap = max(4, h - 6)
-    size = target_cap * 4
-    f = ImageFont.truetype(FONT_BOLD, size)
-    bb = f.getbbox(text)
-    tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    while tw > (w - 6) * 4 and size > 4:
-        size -= 1
+    # teks: cari ukuran font terbesar yang muat, lalu gambar sekali di posisi akhir
+    size = max(6, h - 4)
+    while size > 5:
         f = ImageFont.truetype(FONT_BOLD, size)
         bb = f.getbbox(text)
-        tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    layer = Image.new("L", (tw, th), 0)
-    ImageDraw.Draw(layer).text((-bb[0], -bb[1]), text, font=f, fill=255)
-    layer = layer.resize((max(1, round(tw / 4)), max(1, round(th / 4))), Image.LANCZOS)
-    ox = (w - layer.width) // 2
-    oy = (h - layer.height) // 2
-    img.paste((255, 255, 255, 255), (ox, oy), layer)
+        if bb[2] - bb[0] <= w - 6 and bb[3] - bb[1] <= h - 4:
+            break
+        size -= 1
+    f = ImageFont.truetype(FONT_BOLD, size)
+    bb = f.getbbox(text)
+    d.text(((w - (bb[2] - bb[0])) // 2 - bb[0], (h - (bb[3] - bb[1])) // 2 - bb[1]), text, font=f, fill=(255, 255, 255, 255))
     return img
 
 
