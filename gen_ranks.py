@@ -52,14 +52,14 @@ def draw_pill(text, top, bot, border, height=36, pad=10):
         x += cw + track
     return img.resize((max(1, w // S), max(1, h // S)), Image.LANCZOS)
 
-def bedrock_cell(pill):
+def bedrock_cell(pill, target_w=None):
     """Satu glyph Bedrock per rank: sel 128x128, badge ditempel di tengah dengan padding transparan.
 
     Bedrock mengukur area opaque (bounding box), jadi rasio lebar:tinggi badge dipertahankan walau selnya kotak.
     """
     CELL = 128
     cell = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-    w = CELL // 2  # ~64 px: ukuran render badge di Bedrock; naikkan kalau terlalu kecil
+    w = target_w or (CELL // 2)
     h = max(1, round(pill.height * w / pill.width))
     if h > CELL - 8:
         h = CELL - 8
@@ -91,10 +91,12 @@ def main():
         providers.append({"type": "bitmap", "file": f"zareyranks:font/{name}.png",
                           "height": 9, "ascent": 7, "chars": [cp]})
         # bedrock: satu sel 128x128 per rank, badge di tengah (padding transparan)
-        cell = bedrock_cell(pill)
-        cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
-        glyph_sheet.alpha_composite(cell, (cx, cy))
-        cell_index += 1
+        # sel 0..4 = badge sama pada ukuran berbeda, biar tuning cukup ganti prefiks (tanpa repack/reload)
+        for target_w in (111, 64, 48, 36, 28):
+            cell = bedrock_cell(pill, target_w)
+            cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
+            glyph_sheet.alpha_composite(cell, (cx, cy))
+            cell_index += 1
         preview.alpha_composite(pill, (bx, 22))
         bx += pill.width + 10
         print(f"{name}: java glyph U+{cfg['cp']:04X} pill {pill.width}x{pill.height}, bedrock cells U+{cfg['cp']:04X}..U+{cfg['cp']+len(cfg['label'])-1:04X}")
@@ -118,9 +120,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 3], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 4], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 3]}]}, f, indent=2)
+                                "version": [1, 0, 4]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
