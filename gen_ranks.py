@@ -111,7 +111,7 @@ def main():
                           "height": 9, "ascent": 7, "chars": [cp]})
         # bedrock: satu sel 128x128 per rank, badge di tengah (padding transparan)
         # sel 0..4 = badge sama pada ukuran berbeda, biar tuning cukup ganti prefiks (tanpa repack/reload)
-        for target_w in (111, 64, 48, 36, 28):
+        for target_w in (111, 64, 48, 44, 40):
             cell = bedrock_cell(draw_bedrock_native(cfg["label"], cfg["top"], cfg["bot"], cfg["border"], target_w))
             cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
             glyph_sheet.alpha_composite(cell, (cx, cy))
@@ -139,9 +139,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 7], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 8], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 7]}]}, f, indent=2)
+                                "version": [1, 0, 8]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
