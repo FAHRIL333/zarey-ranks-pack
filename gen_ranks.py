@@ -59,7 +59,7 @@ def bedrock_cell(pill):
     """
     CELL = 128
     cell = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-    w = CELL - 8
+    w = CELL // 2  # ~64 px: ukuran render badge di Bedrock; naikkan kalau terlalu kecil
     h = max(1, round(pill.height * w / pill.width))
     if h > CELL - 8:
         h = CELL - 8
@@ -118,9 +118,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 2], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 3], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 2]}]}, f, indent=2)
+                                "version": [1, 0, 3]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
