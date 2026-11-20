@@ -52,10 +52,10 @@ def draw_pill(text, top, bot, border, height=36, pad=10):
         x += cw + track
     return img.resize((max(1, w // S), max(1, h // S)), Image.LANCZOS)
 
-def draw_tile(ch, top, bot, border, side):
-    """16x16 bedrock cell; side = 'first' | 'mid' | 'last'."""
-    H = 16 * S
-    W = 16 * S
+def draw_bedrock_pill(label, top, bot, border):
+    """Pill digambar utuh 16*len x 16 px, lalu dipotong per 16 px supaya sel nyambung."""
+    n = len(label)
+    W, H = 16 * n * S, 16 * S
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     body = Image.new("RGBA", (W, H))
     bd = ImageDraw.Draw(body)
@@ -63,18 +63,21 @@ def draw_tile(ch, top, bot, border, side):
         bd.line([(0, y), (W, y)], fill=lerp(top, bot, y / (H - 1)) + (255,))
     mask = Image.new("L", (W, H), 0)
     md = ImageDraw.Draw(mask)
-    inset = 3 * S // 2
-    md.rectangle([0, 0, W, H], fill=255)
+    md.rounded_rectangle([0, 0, W - 1, H - 1], radius=4 * S, fill=255)
     img.paste(body, (0, 0), mask)
     d = ImageDraw.Draw(img)
-    d.line([(0, 0), (0, H)], fill=border + (255,), width=2 * S // 2)
-    d.line([(W - 1, 0), (W - 1, H)], fill=border + (255,), width=2 * S // 2)
-    d.line([(0, 0), (W, 0)], fill=border + (255,), width=S)
-    d.line([(0, H - 1), (W, H - 1)], fill=border + (255,), width=S)
-    f = ImageFont.truetype(FONT_BOLD, 13 * S)
-    bb = f.getbbox(ch)
-    d.text(((W - (bb[2] - bb[0])) // 2 - bb[0], (H - (bb[3] - bb[1])) // 2 - bb[1] - S // 2), ch, font=f, fill=(255, 255, 255, 255))
-    return img.resize((16, 16), Image.LANCZOS)
+    d.rounded_rectangle([0, 0, W - 1, H - 1], radius=4 * S, outline=border + (255,), width=max(1, S))
+    f = ImageFont.truetype(FONT_BOLD, 11 * S)
+    widths = [f.getbbox(c)[2] - f.getbbox(c)[0] for c in label]
+    track = -1 * S
+    total = sum(widths) + track * (n - 1)
+    x = (W - total) // 2
+    for ch, cw in zip(label, widths):
+        bb = f.getbbox(ch)
+        d.text((x - bb[0], (H - (bb[3] - bb[1])) // 2 - bb[1]), ch, font=f, fill=(255, 255, 255, 255))
+        x += cw + track
+    small = img.resize((16 * n, 16), Image.LANCZOS)
+    return [small.crop((i * 16, 0, i * 16 + 16, 16)) for i in range(n)]
 
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
@@ -100,8 +103,7 @@ def main():
         providers.append({"type": "bitmap", "file": f"zareyranks:font/{name}.png",
                           "height": 9, "ascent": 7, "chars": [cp]})
         # bedrock: one cell per letter, packed left-to-right
-        for i, ch in enumerate(cfg["label"]):
-            tile = draw_tile(ch, cfg["top"], cfg["bot"], cfg["border"], "first" if i == 0 else ("last" if i == len(cfg["label"]) - 1 else "mid"))
+        for tile in draw_bedrock_pill(cfg["label"], cfg["top"], cfg["bot"], cfg["border"]):
             cx, cy = (cell_index % 16) * 16, (cell_index // 16) * 16
             glyph_sheet.alpha_composite(tile, (cx, cy))
             cell_index += 1
