@@ -130,9 +130,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 0], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 1], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 0]}]}, f, indent=2)
+                                "version": [1, 0, 1]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
