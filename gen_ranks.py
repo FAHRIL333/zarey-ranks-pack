@@ -52,20 +52,50 @@ def draw_pill(text, top, bot, border, height=36, pad=10):
         x += cw + track
     return img.resize((max(1, w // S), max(1, h // S)), Image.LANCZOS)
 
-def bedrock_cell(pill, target_w=None):
-    """Satu glyph Bedrock per rank: sel 128x128, badge ditempel di tengah dengan padding transparan.
+def draw_bedrock_native(text, top, bot, border, w):
+    """Badge Bedrock digambar LANGSUNG di ukuran akhir (tanpa downscale) supaya tidak blur.
 
-    Bedrock mengukur area opaque (bounding box), jadi rasio lebar:tinggi badge dipertahankan walau selnya kotak.
+    Ukuran render klien ikut jumlah piksel art, jadi ukuran tetap = w kecil,
+    ketajaman didapat dari teks yang di-threshold jadi biner 1 bit (tajam, tanpa halo abu-abu).
     """
-    CELL = 256  # sel besar: rasio badge tetap, resolusi 2x lipat biar label "WARGA" nggak blur
-    cell = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-    w = target_w or (CELL // 2)
-    h = max(1, round(pill.height * w / pill.width))
-    if h > CELL - 8:
-        h = CELL - 8
-        w = max(1, round(pill.width * h / pill.height))
-    cell.alpha_composite(pill.resize((w, h), Image.LANCZOS), ((CELL - w) // 2, (CELL - h) // 2))
-    return cell
+    h = max(7, round(w * 12 / 36))
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    body = Image.new("RGBA", (w, h))
+    bd = ImageDraw.Draw(body)
+    for y in range(h):
+        bd.line([(0, y), (w, y)], fill=lerp(top, bot, y / max(1, h - 1)) + (255,))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=max(2, h // 2), fill=255)
+    img.paste(body, (0, 0), mask)
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=max(2, h // 2), outline=border + (255,), width=1)
+    # teks: render 4x lalu threshold -> biner, tepi tajam
+    target_cap = max(4, h - 6)
+    size = target_cap * 4
+    f = ImageFont.truetype(FONT_BOLD, size)
+    bb = f.getbbox(text)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    while tw > (w - 6) * 4 and size > 4:
+        size -= 1
+        f = ImageFont.truetype(FONT_BOLD, size)
+        bb = f.getbbox(text)
+        tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    layer = Image.new("L", (tw, th), 0)
+    ImageDraw.Draw(layer).text((-bb[0], -bb[1]), text, font=f, fill=255)
+    layer = layer.resize((max(1, round(tw / 4)), max(1, round(th / 4))), Image.LANCZOS)
+    layer = layer.point(lambda v: 255 if v >= 110 else 0)
+    ox = (w - layer.width) // 2
+    oy = (h - layer.height) // 2
+    img.paste((255, 255, 255, 255), (ox, oy), layer)
+    return img
+
+
+def bedrock_cell(badge, cell=128):
+    """Tempel badge apa adanya di tengah sel; sisanya transparan (bbox = ukuran render)."""
+    canvas = Image.new("RGBA", (cell, cell), (0, 0, 0, 0))
+    canvas.alpha_composite(badge, ((cell - badge.width) // 2, (cell - badge.height) // 2))
+    return canvas
+
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
     jroot = os.path.join(OUT, "java")
@@ -80,7 +110,7 @@ def main():
 
     providers, preview = [], Image.new("RGBA", (400, 60), (28, 28, 32, 255))
     bx = 8
-    CELL = 256  # sel besar: rasio badge tetap, resolusi 2x lipat biar label "WARGA" nggak blur
+    CELL = 128  # sel kecil: rasio badge tetap, resolusi 2x lipat biar label "WARGA" nggak blur
     glyph_sheet = Image.new("RGBA", (CELL * 16, CELL * 16), (0, 0, 0, 0))
     cell_index = 0
 
@@ -92,8 +122,8 @@ def main():
                           "height": 9, "ascent": 7, "chars": [cp]})
         # bedrock: satu sel 128x128 per rank, badge di tengah (padding transparan)
         # sel 0..4 = badge sama pada ukuran berbeda, biar tuning cukup ganti prefiks (tanpa repack/reload)
-        for target_w in (222, 128, 96, 72, 56):
-            cell = bedrock_cell(pill, target_w)
+        for target_w in (111, 64, 48, 36, 28):
+            cell = bedrock_cell(draw_bedrock_native(cfg["label"], cfg["top"], cfg["bot"], cfg["border"], target_w))
             cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
             glyph_sheet.alpha_composite(cell, (cx, cy))
             cell_index += 1
@@ -120,9 +150,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 5], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 6], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 5]}]}, f, indent=2)
+                                "version": [1, 0, 6]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
