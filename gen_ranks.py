@@ -57,7 +57,7 @@ def bedrock_cell(pill, target_w=None):
 
     Bedrock mengukur area opaque (bounding box), jadi rasio lebar:tinggi badge dipertahankan walau selnya kotak.
     """
-    CELL = 128
+    CELL = 256  # sel besar: rasio badge tetap, resolusi 2x lipat biar label "WARGA" nggak blur
     cell = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
     w = target_w or (CELL // 2)
     h = max(1, round(pill.height * w / pill.width))
@@ -80,7 +80,7 @@ def main():
 
     providers, preview = [], Image.new("RGBA", (400, 60), (28, 28, 32, 255))
     bx = 8
-    CELL = 128
+    CELL = 256  # sel besar: rasio badge tetap, resolusi 2x lipat biar label "WARGA" nggak blur
     glyph_sheet = Image.new("RGBA", (CELL * 16, CELL * 16), (0, 0, 0, 0))
     cell_index = 0
 
@@ -92,7 +92,7 @@ def main():
                           "height": 9, "ascent": 7, "chars": [cp]})
         # bedrock: satu sel 128x128 per rank, badge di tengah (padding transparan)
         # sel 0..4 = badge sama pada ukuran berbeda, biar tuning cukup ganti prefiks (tanpa repack/reload)
-        for target_w in (111, 64, 48, 36, 28):
+        for target_w in (222, 128, 96, 72, 56):
             cell = bedrock_cell(pill, target_w)
             cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
             glyph_sheet.alpha_composite(cell, (cx, cy))
@@ -120,9 +120,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 4], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 5], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 4]}]}, f, indent=2)
+                                "version": [1, 0, 5]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
