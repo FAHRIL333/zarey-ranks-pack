@@ -52,33 +52,20 @@ def draw_pill(text, top, bot, border, height=36, pad=10):
         x += cw + track
     return img.resize((max(1, w // S), max(1, h // S)), Image.LANCZOS)
 
-def draw_bedrock_pill(label, top, bot, border):
-    """Pill digambar utuh 16*len x 16 px, lalu dipotong per 16 px supaya sel nyambung."""
-    n = len(label)
-    W, H = 16 * n * S, 16 * S
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    body = Image.new("RGBA", (W, H))
-    bd = ImageDraw.Draw(body)
-    for y in range(H):
-        bd.line([(0, y), (W, y)], fill=lerp(top, bot, y / (H - 1)) + (255,))
-    mask = Image.new("L", (W, H), 0)
-    md = ImageDraw.Draw(mask)
-    md.rounded_rectangle([0, 0, W - 1, H - 1], radius=4 * S, fill=255)
-    img.paste(body, (0, 0), mask)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([0, 0, W - 1, H - 1], radius=4 * S, outline=border + (255,), width=max(1, S))
-    f = ImageFont.truetype(FONT_BOLD, 11 * S)
-    widths = [f.getbbox(c)[2] - f.getbbox(c)[0] for c in label]
-    track = -1 * S
-    total = sum(widths) + track * (n - 1)
-    x = (W - total) // 2
-    for ch, cw in zip(label, widths):
-        bb = f.getbbox(ch)
-        d.text((x - bb[0], (H - (bb[3] - bb[1])) // 2 - bb[1]), ch, font=f, fill=(255, 255, 255, 255))
-        x += cw + track
-    small = img.resize((16 * n, 16), Image.LANCZOS)
-    return [small.crop((i * 16, 0, i * 16 + 16, 16)) for i in range(n)]
+def bedrock_cell(pill):
+    """Satu glyph Bedrock per rank: sel 128x128, badge ditempel di tengah dengan padding transparan.
 
+    Bedrock mengukur area opaque (bounding box), jadi rasio lebar:tinggi badge dipertahankan walau selnya kotak.
+    """
+    CELL = 128
+    cell = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    w = CELL - 8
+    h = max(1, round(pill.height * w / pill.width))
+    if h > CELL - 8:
+        h = CELL - 8
+        w = max(1, round(pill.width * h / pill.height))
+    cell.alpha_composite(pill.resize((w, h), Image.LANCZOS), ((CELL - w) // 2, (CELL - h) // 2))
+    return cell
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
     jroot = os.path.join(OUT, "java")
@@ -93,7 +80,8 @@ def main():
 
     providers, preview = [], Image.new("RGBA", (400, 60), (28, 28, 32, 255))
     bx = 8
-    glyph_sheet = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    CELL = 128
+    glyph_sheet = Image.new("RGBA", (CELL * 16, CELL * 16), (0, 0, 0, 0))
     cell_index = 0
 
     for name, cfg in RANKS.items():
@@ -102,11 +90,11 @@ def main():
         cp = chr(cfg["cp"])
         providers.append({"type": "bitmap", "file": f"zareyranks:font/{name}.png",
                           "height": 9, "ascent": 7, "chars": [cp]})
-        # bedrock: one cell per letter, packed left-to-right
-        for tile in draw_bedrock_pill(cfg["label"], cfg["top"], cfg["bot"], cfg["border"]):
-            cx, cy = (cell_index % 16) * 16, (cell_index // 16) * 16
-            glyph_sheet.alpha_composite(tile, (cx, cy))
-            cell_index += 1
+        # bedrock: satu sel 128x128 per rank, badge di tengah (padding transparan)
+        cell = bedrock_cell(pill)
+        cx, cy = (cell_index % 16) * CELL, (cell_index // 16) * CELL
+        glyph_sheet.alpha_composite(cell, (cx, cy))
+        cell_index += 1
         preview.alpha_composite(pill, (bx, 22))
         bx += pill.width + 10
         print(f"{name}: java glyph U+{cfg['cp']:04X} pill {pill.width}x{pill.height}, bedrock cells U+{cfg['cp']:04X}..U+{cfg['cp']+len(cfg['label'])-1:04X}")
@@ -130,9 +118,9 @@ def main():
     with open(os.path.join(broot, "manifest.json"), "w") as f:
         json.dump({"format_version": 2,
                    "header": {"name": "ZareyEcoSMP Ranks", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-uuid")),
-                              "version": [1, 0, 1], "min_engine_version": [1, 21, 0]},
+                              "version": [1, 0, 2], "min_engine_version": [1, 21, 0]},
                    "modules": [{"type": "resources", "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, "zareyr-names-mod")),
-                                "version": [1, 0, 1]}]}, f, indent=2)
+                                "version": [1, 0, 2]}]}, f, indent=2)
 
     for src, name in ((jroot, "ZareyRanks-Java.zip"), (broot, "ZareyRanks-Bedrock.mcpack")):
         path = os.path.join(OUT, name)
